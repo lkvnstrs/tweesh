@@ -6,15 +6,53 @@ import (
     "io/ioutil"
     "net/http"
     "strconv"
+    "strings"
     "time"
 )
 
 type Timestamp time.Time
 
 type Tweet struct {
-    // Id string               `json:"id_str"`
-    Text string             `json:"text"`
+    Id      string  `json:"id_str"`
+    Text    string  `json:"text"`
 }
+
+// Used to avoid recusion in UnmarshalJSON for Tweet.
+type tweet Tweet
+
+// String returns a string version of a Tweet.
+func (t *Tweet) AsWords() []Word {
+
+    text := strings.TrimSpace(TrimMentions(t.Text))
+    split := strings.Split(text, " ")
+    words := make([]Word, 0)
+
+    for _, s := range split {
+
+        if s == "" || s == " " {
+            continue
+        }
+
+        words = append(words, Word{s: s, id: t.Id})
+    }
+
+    return words
+}
+
+// UnmarshalJSON implements the json.Unmarshaller interface
+// for a Tweet.
+// func (t *Tweet) UnmarshalJSON(b []byte) error {
+//     var tmp tweet
+
+//     if err := json.Unmarshal(b, &tmp); err == nil {
+//         return err
+//     }
+
+//     t.Id = tmp.Id
+//     t.Text = TrimMentions(tmp.Text)
+
+//     return nil
+// }
 
 // UnmarshalJSON implements the json.Unmarshaller interface
 // for a Timestamp.

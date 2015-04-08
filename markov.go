@@ -4,9 +4,18 @@
 package main
 
 import (
+    "errors"
     "math/rand"
     "strings"
 )
+
+// Word is a single word in a Prefix and Chain.
+// s is the string value of the Word.
+// id is a unique identifier for the source of the Word.
+type Word struct {
+    s   string
+    id  string
+}
 
 // Prefix is a Markov chain prefix of one of more words.
 type Prefix []string
@@ -26,49 +35,72 @@ func (p Prefix) Shift(word string) {
 // A prefix is a string of prefixLen words joined with spaces.
 // A suffix is a single word. A prefix can havemutliple suffixes.
 type Chain struct {
-    chain       map[string][]string
+    chain       map[string][]Word
     prefixLen   int
 }
 
 // NewChain returns a new Chain with prefixes of prefixLen words.
 func NewChain(prefixLen int) *Chain {
-    return &Chain{make(map[string][]string), prefixLen}
+    return &Chain{make(map[string][]Word), prefixLen}
 }
 
-// AddTweets parses the given Tweets into the Markov chain.
-func (c *Chain) AddTweets(tweets *[]Tweet) {
-
-    for _, t := range *tweets {
-
-        line := TrimMentions(t.Text)
-        if len(line) < 20 {
-            continue
-        }
+// AddTweets parses the given WordSources into the Markov chain.
+func (c *Chain) AddWords(words []Word) {
         
-        p := make(Prefix, c.prefixLen)
+    if words == nil {
+       return
+    }
 
-        for _, s := range strings.Split(line, " ") {
-            key := p.String()
-            c.chain[key] = append(c.chain[key], s)
-            p.Shift(s)
-        }
+    p := make(Prefix, c.prefixLen)
+
+    for _, w := range words {
+
+        key := p.String()
+        c.chain[key] = append(c.chain[key], w)
+        p.Shift(w.s)
     }
 }
 
 // Generate returns a string of at most n words generated from Chain.
-func (c *Chain) Generate(n int) string {
-    p := make(Prefix, c.prefixLen)
+// Ensures a generated phrase has some source variation.
+func (c *Chain) Generate(n int) (string, error) {
+    
+    var current_id string
     var words []string
-    for i := 0; i < n; i++ {
-        choices := c.chain[p.String()]
-        if len(choices) == 0 {
-            break
+
+    for {
+
+        p := make(Prefix, c.prefixLen)
+        found_id_variation := false
+
+        for i := 0; i < n; i++ {
+
+            choices := c.chain[p.String()]
+            if len(choices) == 0 {
+                break
+            }
+
+            next := choices[rand.Intn(len(choices))]
+
+            words = append(words, next.s)
+
+            if !found_id_variation {
+                found_id_variation = current_id != "" && current_id != next.id
+                current_id = next.id
+            }
+
+            p.Shift(next.s)
         }
 
-        next := choices[rand.Intn(len(choices))]
-        words = append(words, next)
-        p.Shift(next)
+        if found_id_variation {
+            return strings.Join(words, " "), nil
+        }
+
+        // clear vars
+        words = words[:0]
+        current_id = ""
     }
 
-    return strings.Join(words, " ")
+    return "", errors.New("No unique strings found")    
+    
 }

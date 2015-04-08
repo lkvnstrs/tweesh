@@ -32,8 +32,8 @@ func main() {
     }
 
     c := NewChain(*prefixLen)
-    // accounts := []string{"arjunblj", "lkvnstrs", "ctbeiser", "v_mohankumar", "phrmsilva", "ZZZZUnit"}
-    accounts := []string{"2chainz", "TheRock", "LilTunechi", "Drake", "FrencHMonTanA", "kanyewest", "SnoopDogg", "yungleann"}
+    accounts := []string{"arjunblj", "lkvnstrs", "ctbeiser", "v_mohankumar", "phrmsilva", "ZZZZUnit"}
+    // accounts := []string{"2chainz", "TheRock", "LilTunechi", "Drake", "FrencHMonTanA", "kanyewest", "SnoopDogg", "yungleann"}
 
     var wg sync.WaitGroup
 
@@ -42,7 +42,9 @@ func main() {
     for _, a := range accounts {
         go func(a string) {
             tweets, _ := tg.GetTweets(a, 200)
-            c.AddTweets(&tweets)
+            for _, t := range tweets {
+                c.AddWords(t.AsWords())
+            }
             wg.Done()
         }(a)
     }
@@ -53,9 +55,9 @@ func main() {
     reader := bufio.NewReader(os.Stdin)
 
     for in != "exit" {
-        text := c.Generate(*numWords)
+        text, _ := c.Generate(*numWords)
         fmt.Println(text)
-        fmt.Println("Press enter to coninute (exit to end)...")
+        fmt.Println("Press enter to continue (exit to end)...")
         in, _ = reader.ReadString('\n')
     }
 }
